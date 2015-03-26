@@ -69,35 +69,43 @@ module.exports = (function () {
                         var requests = {};
                         var self = this;
                         this.worker.on('request', function (inp, rep) {
-                                
-                                console.log('Got: '+inp);
-                                
+                                // code.message.location.severity
+                                // 500.Internal Server Error.wf12:app1:enterprise.severity
+                                console.log('Got: ' + inp);
+
+                                var explode = inp.split('.');
+                                var code = explode[0] || '500';
+                                var message = explode[1] || 'Error';
+                                var location = explode[2] || 'Location:Unknown';
+                                var severity = explode[3] || '100';
+
+                                var locationExplode = location.split(':');
+
+                                var tsd = '';
+                                for (var counter = locationExplode.length - 1; counter >= 0; counter--) {
+                                        tsd += locationExplode[counter] + '.';
+                                }
+                                tsd += code;
+
                                 rep.write('received');
 
                                 this.client = new Client('tcp://' + self.conf.broker.host + ':' + self.conf.broker.port);
                                 this.client.start();
                                 this.client.request(
-                                        'tsdLog', 'notify.tth.enterprise.wf12.500',
+                                        'tsdLog', tsd,
                                         function (err, data) {
                                         },
                                         function (err, data) {
                                         }, {timeout: 10000}
                                 );
 
+
                                 var humanSet = humans.all();
-                                humanSet.text('There was an error on workflow 11');
-                                humanSet.email('Node email test', 'why did you even open it?\n this fuckin guy');
-                                humanSet.phone('Boomchakalakalaka boomchakalakalaka boomchakalakalaka, boom,,, bazinga, your mom, etc');
+                                humanSet.text(message, severity);
+                                humanSet.email('HRS Notification', message, severity);
+                                humanSet.phone(message, severity);
                                 rep.end('SUCCESS');
                         });
-
-//                        redisClient.lock('lock:' + md5, 'tth');
-//                        redisClient.on('locked', function () {
-//                                redisClient.unlock('someunique', 'tth');
-//                                redisClient.on('unlock', function () {
-//                                        console.log('unlocked');
-//                                });
-//                        });
 
                 },
                 logger: function ()
@@ -193,39 +201,35 @@ module.exports = (function () {
                         // CALLBACK MODE
                         var count = 0;
                         console.log("CLIENT SEND REQUEST (callback mode)");
-                        console.time('1000-requests');
+                        console.time('1-requests');
 
-                        for (i = 0, c = 1000; i < c; i++)
+                        for (i = 0, c = 1; i < c; i++)
                         {
                                 this.client.request(
-                                        // tth
                                         //error code, message, location, and severity (scale 0-100)
-                                        //'tth', '500.error something went wrong.wf12.100',
-                                        'tsdLog', 'enterprise.notifications.worker.loadtest',
-                                                function (err, data) {
-                                                        console.log("PARTIAL", err, data);
-                                                },
-                                                function (err, data) {
-                                                        console.log("FINAL", err, data);
-                                                        //count++;
-                                                        //console.log('GOT '+count);
-                                                }, {timeout: 10000}
-                                        );
-                                }
+                                        'tth', '500.Internal Server Error.wf12:app1:enterprise.100',
+                                        //'tsdLog', 'enterprise.notifications.worker.loadtest',
+                                        function (err, data) {
+                                                console.log("PARTIAL", err, data);
+                                        },
+                                        function (err, data) {
+                                                console.log("FINAL", err, data);
+                                        }, {timeout: 10000}
+                                );
+                        }
 
-                        console.timeEnd('1000-requests');
+                        console.timeEnd('1-requests');
                         return this.client;
                 },
                 broker: function ()
                 {
-                        var self = this;
                         this.broker = new Broker("tcp://*:" + this.conf.broker.port);
                         this.broker.start(function (err) {
                                 console.log('doing stuff...');
                                 //console.log(self.broker);
-                                if (err){
+                                if (err) {
                                         console.log(err);
-                                        process.exit(1);
+                                        process.exit(0);
                                 }
                         });
                         return this.broker;
@@ -235,3 +239,11 @@ module.exports = (function () {
         return notify;
 
 })();
+
+//                        redisClient.lock('lock:' + md5, 'tth');
+//                        redisClient.on('locked', function () {
+//                                redisClient.unlock('someunique', 'tth');
+//                                redisClient.on('unlock', function () {
+//                                        console.log('unlocked');
+//                                });
+//                        });

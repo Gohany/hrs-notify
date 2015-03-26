@@ -25,7 +25,8 @@ module.exports = (function () {
                         'name': 'Greg',
                         'phone': '+12692671728',
                         'text': '+12692671728',
-                        'email': 'gohany@gmail.com'
+                        'email': 'gohany@gmail.com',
+                        'severityLimit': 50,
                 }
         ]
 
@@ -51,17 +52,17 @@ module.exports = (function () {
                 return new humans(this.list);
         }
 
-        humans.prototype.text = function (message)
+        humans.prototype.text = function (message, severity)
         {
                 for (var key in this.activeHumans)
                 {
-                        if ('text' in this.activeHumans[key])
+                        if ('text' in this.activeHumans[key] && !severity || ('severityLimit' in this.activeHumans[key] && this.activeHumans[key].severityLimit <= severity))
                         {
                                 console.log('sending text to ' + this.activeHumans[key].text);
                                 client.sendMessage({
                                         to: this.activeHumans[key].text, // Any number Twilio can deliver to
                                         from: '+12697433536', // A number you bought from Twilio and can use for outbound communication
-                                        body: message, // body of the SMS message
+                                        body: message + ' Severity: '+severity+"%\n", // body of the SMS message
                                 }, function (err, responseData) {
                                         if (err) {
                                                 console.log(err);
@@ -73,33 +74,32 @@ module.exports = (function () {
                 }
         }
 
-        humans.prototype.email = function (subject, body)
+        humans.prototype.email = function (subject, body, severity)
         {
                 for (var key in this.activeHumans)
                 {
-                        if ('email' in this.activeHumans[key])
+                        if ('email' in this.activeHumans[key] && !severity || ('severityLimit' in this.activeHumans[key] && this.activeHumans[key].severityLimit <= severity))
                         {
                                 var transporter = nodemailer.createTransport();
                                 transporter.sendMail({
                                         from: 'notify@hrscontrol.com',
                                         to: this.activeHumans[key].email,
                                         subject: subject,
-                                        text: body
+                                        text: body + "\nSeverity: "+severity+"%\n",
                                 });
+                                console.log('Email sent');
                         }
                 }
         }
 
-        humans.prototype.phone = function(say)
+        humans.prototype.phone = function(say, severity)
         {
                 for (var key in this.activeHumans)
                 {
-                        if ('phone' in this.activeHumans[key])
+                        if ('phone' in this.activeHumans[key] && !severity || ('severityLimit' in this.activeHumans[key] && this.activeHumans[key].severityLimit <= severity))
                         {
                                 client.calls.create({
-                                        // make a thingie do... like
-                                        //url: "http://demo.twilio.com/docs/voice.xml",
-                                        url: "http://24.176.24.114/?Say="+encodeURIComponent(say),
+                                        url: "http://24.176.24.114/?Say="+encodeURIComponent(say + ',,The severity level is '+severity+' percent'),
                                         to: this.activeHumans[key].phone,
                                         //sendDigits: "1234#11111",
                                         from: '+12697433536',
@@ -108,7 +108,7 @@ module.exports = (function () {
                                         if (!err)
                                                 console.log("Call sent");
                                         
-                                        console.log(err);
+                                        //console.log(err);
                                 });
                         }
                 }
